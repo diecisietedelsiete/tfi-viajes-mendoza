@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Tirolesa Uniendo Conceptos - Verano en Potrerillos | Modo Horizontal</title>
+    <style>
+        * {
+            user-select: none;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: #87CEEB;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Orbitron', monospace;
+        }
+
+        /* Contenedor principal - horizontal */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #87CEEB;
+        }
+
+        @media (min-width: 768px) {
+            body {
+                padding: 16px;
+                background: #1a3a5a;
+            }
+            #game-container {
+                border-radius: 28px;
+                box-shadow: 0 25px 45px rgba(0, 0, 0, 0.5);
+                border: 3px solid #4a8a6a;
+                max-width: 95%;
+                max-height: 95%;
+                margin: auto;
+            }
+        }
+
+        /* Fondo celeste para todo */
+        #sky-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #87CEEB, #b0e0ff);
+            z-index: 0;
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            z-index: 100;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            background: rgba(0,0,0,0.65);
+            padding: 8px 12px;
+            border-radius: 40px;
+            display: flex;
+            justify-content: space-between;
+            backdrop-filter: blur(4px);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        #message {
+            position: absolute;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            font-size: 12px;
+            color: #ffdd99;
+            background: rgba(0,0,0,0.8);
+            padding: 6px 14px;
+            border-radius: 40px;
+            white-space: nowrap;
+            font-family: monospace;
+            pointer-events: none;
+        }
+
+        #game {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 15;
+        }
+        
+        /* Cerros */
+        .hill {
+            position: absolute;
+            bottom: 0;
+            width: 30%;
+            min-width: 180px;
+            height: 75%;
+            background: linear-gradient(135deg, #5a9c4a, #3a7a2a);
+            border-radius: 50% 50% 0 0;
+            box-shadow: inset -10px 0 20px rgba(0,0,0,0.2);
+            z-index: 2;
+        }
+        .hill-left { left: -5%; }
+        .hill-right { right: -5%; }
+        
+        /* Items sobre los cerros */
+        .items-container {
+            position: absolute;
+            bottom: 10%;
+            width: 28%;
+            min-width: 180px;
+            height: 65%;
+            z-index: 6;
+        }
+        .items-left { left: 2%; }
+        .items-right { right: 2%; }
+        
+        .item-step {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .item-step span {
+            position: relative;
+            background: #ffe8c0;
+            padding: 8px 10px;
+            border-radius: 40px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #8b5a2b;
+            border: 2px solid #e6c394;
+            z-index: 2;
+            width: 95%;
+            word-break: break-word;
+            white-space: normal;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.1s;
+            line-height: 1.3;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+        .item-step.selected span {
+            background: #ffaa33;
+            border-color: #d97a00;
+            color: #fff;
+        }
+        .item-step.matched span {
+            background: #9acd32;
+            text-decoration: line-through;
+            color: #2a5a1a;
+            opacity: 0.8;
+        }
+        
+        #girl {
+            position: absolute;
+            width: auto;
+            height: auto;
+            font-size: 48px;
+            transition: all 0.12s ease;
+            z-index: 25;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
+            pointer-events: none;
+        }
+        
+        #help {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            background: rgba(0,0,0,0.6);
+            padding: 4px 10px;
+            border-radius: 40px;
+            color: white;
+            font-size: 9px;
+            z-index: 100;
+        }
+        
+        .sun {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 55px;
+            height: 55px;
+            background: #FFD700;
+            border-radius: 50%;
+            box-shadow: 0 0 30px #FFA500;
+            animation: sunGlow 2s infinite alternate;
+            z-index: 1;
+        }
+        
+        @keyframes sunGlow {
+            0% { box-shadow: 0 0 20px #FFA500; transform: scale(1); }
+            100% { box-shadow: 0 0 50px #FFD700; transform: scale(1.05); }
+        }
+        
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 80px;
+            opacity: 0.85;
+            z-index: 1;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+        .cloud::before { width: 30px; height: 30px; top: -15px; left: 10px; }
+        .cloud::after { width: 45px; height: 45px; top: -20px; left: 35px; }
+        .cloud1 { width: 80px; height: 30px; top: 25px; left: 8%; }
+        .cloud2 { width: 100px; height: 35px; top: 70px; left: 35%; }
+        .cloud3 { width: 70px; height: 28px; top: 45px; left: 68%; }
+        
+        .ground {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 7%;
+            background: linear-gradient(180deg, #7cb518, #5a8f2c);
+            z-index: 2;
+            border-top: 2px solid #9bce3a;
+        }
+        
+        /* Pantallas */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #0a2a3a, #061a2a);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            backdrop-filter: blur(2px);
+            overflow-y: auto;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .screen.hidden { display: none; }
+        .screen h1 { color: #ffdd99; font-size: 1.3rem; text-shadow: 0 0 10px #ffaa33; margin-bottom: 15px; text-align: center; }
+        .ranking-table { background: #0a1a2a; border-radius: 16px; padding: 12px; margin: 12px 0; border: 1px solid #ffaa33; width: 90%; max-width: 380px; }
+        .ranking-table table { width: 100%; border-collapse: collapse; color: #bbf0ff; font-size: 0.75rem; }
+        .ranking-table th, .ranking-table td { padding: 5px; text-align: center; border-bottom: 1px solid #2a5a6a; }
+        .ranking-table th { color: #ffbc6e; }
+        input { padding: 8px 16px; border-radius: 40px; border: none; background: #fff8e8; font-size: 0.85rem; text-align: center; margin: 8px 0; font-family: monospace; width: 80%; max-width: 220px; }
+        button { background: #daa520; border: none; padding: 10px 20px; border-radius: 40px; color: white; font-weight: bold; font-family: monospace; font-size: 0.9rem; cursor: pointer; margin: 5px; transition: 0.1s; box-shadow: 0 3px 0 #8a5618; }
+        button:active { transform: translateY(2px); box-shadow: none; }
+        .btn-group { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+        
+        /* Controles táctiles grandes */
+        #touch-controls-panel {
+            position: absolute;
+            bottom: 15px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            z-index: 150;
+            pointer-events: none;
+        }
+        
+        .touch-dpad {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(12px);
+            border-radius: 80px;
+            padding: 10px 25px;
+            display: inline-flex;
+            gap: 20px;
+            pointer-events: auto;
+            border: 2px solid #ffcc44;
+            box-shadow: 0 6px 14px black;
+        }
+        
+        .touch-btn {
+            background: #2c6e9e;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #124263;
+            transition: 0.03s linear;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        
+        .touch-btn:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+        
+        .hidden-controls {
+            display: none !important;
+        }
+
+        /* Advertencia de orientación para móvil */
+        .orientation-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000ee;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: monospace;
+            text-align: center;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .orientation-warning.show { display: flex; }
+        .orientation-warning span { font-size: 4rem; margin-bottom: 20px; }
+        .orientation-warning p { font-size: 1.2rem; background: none; margin: 10px; }
+        .orientation-warning button { background: #daa520; margin-top: 20px; padding: 12px 24px; font-size: 1rem; }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <div id="sky-bg"></div>
+    
+    <div id="hud">
+        <div>🏆 PUNTOS: <span id="score-val">0</span></div>
+        <div>🎯 PAREJAS: <span id="matches-count">0</span> / <span id="total-count">5</span></div>
+        <div>🌞 NIVEL: <span id="level-val">1</span>/3</div>
+        <div>⏱️ TIEMPO: <span id="timer-val">00:00</span></div>
+    </div>
+
+    <div id="message">⬅️➡️ cambiar cerro · ⬆️⬇️ subir/bajar · ENTER seleccionar</div>
+
+    <div id="game">
+        <svg id="lines"></svg>
+        
+        <div class="sun"></div>
+        <div class="cloud cloud1"></div>
+        <div class="cloud cloud2"></div>
+        <div class="cloud cloud3"></div>
+        
+        <div class="hill hill-left"></div>
+        <div class="hill hill-right"></div>
+        <div class="ground"></div>
+        
+        <div class="items-container items-left" id="leftContainer"></div>
+        <div class="items-container items-right" id="rightContainer"></div>
+        
+        <div id="girl">🧗‍♀️</div>
+    </div>
+
+    <div id="help">Niveles: 0(arriba) a 4(abajo) · 5(base) · Centro(⬅️➡️)</div>
+
+    <div id="touch-controls-panel" class="hidden-controls">
+        <div class="touch-dpad">
+            <div class="touch-btn" id="touch-left">◀</div>
+            <div class="touch-btn" id="touch-up">▲</div>
+            <div class="touch-btn" id="touch-down">▼</div>
+            <div class="touch-btn" id="touch-right">▶</div>
+            <div class="touch-btn" id="touch-enter">↵</div>
+        </div>
+    </div>
+
+    <div id="screen-start" class="screen">
+        <h1>🪢 TIROLESA UNIENDO CONCEPTOS 🪢</h1>
+        <p style="color:#bbf0ff; text-align:center; padding:0 20px;">Uní cada situación con su tipo<br>Completa antes de 5 minutos para ganar</p>
+        <div class="ranking-table">
+            <h2>🏆 RANKING (TOP 5)</h2>
+            <table id="ranking-table-start"><thead><tr><th>#</th><th>JUGADOR</th><th>TIEMPO</th></tr></thead><tbody id="ranking-body-start"></tbody></table>
+        </div>
+        <input type="text" id="player-name" placeholder="NOMBRE" maxlength="20">
+        <button id="btn-start-game" style="background:#2e8b57;">🪢 INICIAR TIROLESA</button>
+        <p> 🙂 CC BY-NC-SA </p>
+    </div>
+
+    <div id="screen-end" class="screen hidden">
+        <h1 id="end-title">💥 ¡FIN DEL JUEGO!</h1>
+        <p id="end-message" style="color:#ffdd99;"></p>
+        <p>PUNTUACIÓN FINAL: <span id="final-score">0</span></p>
+        <div class="ranking-table"><h2>🏆 RANKING (TOP 5)</h2>
+            <table id="ranking-table-end"><thead><tr><th>#</th><th>JUGADOR</th><th>TIEMPO</th></tr></thead><tbody id="ranking-body-end"></tbody></table>
+        </div>
+        <div class="btn-group" id="end-buttons"><button id="btn-restart" style="background:#daa520;">🪢 REINICIAR</button></div>
+    </div>
+</div>
+
+<!-- Advertencia de orientación horizontal para móvil -->
+<div id="orientation-warning" class="orientation-warning">
+    <span>📱🔄</span>
+    <p>Por favor, girá el dispositivo a posición HORIZONTAL<br>para jugar a la Tirolesa</p>
+    <button id="understood-btn">Entendido</button>
+</div>
+
+<script>
+// ========================================================
+// BASE DE DATOS
+// ========================================================
+const SITUACIONES = [
+    { id: 1, texto: "Conversación cara a cara", lenguajes: "Mixto", participantes: "Interpersonal", tecnologia: "Directa" },
+    { id: 2, texto: "Clase virtual por Zoom", lenguajes: "Mixto", participantes: "Grupal", tecnologia: "Interactiva" },
+    { id: 3, texto: "Noticiero de radio", lenguajes: "Mixto", participantes: "Masiva", tecnologia: "Mediática" },
+    { id: 4, texto: "Semáforo en rojo", lenguajes: "No verbal", participantes: "Masiva", tecnologia: "No mediada" },
+    { id: 5, texto: "Chat de WhatsApp sin imágenes", lenguajes: "Verbal", participantes: "Grupal", tecnologia: "Interactiva" },
+    { id: 6, texto: "Abrazo de consuelo", lenguajes: "No verbal", participantes: "Interpersonal", tecnologia: "Directa" },
+    { id: 7, texto: "Tuit viral", lenguajes: "Verbal", participantes: "Masiva", tecnologia: "Interactiva" },
+    { id: 8, texto: "Señal de 'prohibido fumar'", lenguajes: "No verbal", participantes: "Masiva", tecnologia: "Directa" },
+    { id: 9, texto: "Entrevista laboral en persona", lenguajes: "Mixto", participantes: "Interpersonal", tecnologia: "Directa" },
+    { id: 10, texto: "Videojuego online en red", lenguajes: "Mixto", participantes: "Grupal", tecnologia: "Interactiva" },
+    { id: 11, texto: "Sirenas de ambulancia", lenguajes: "No verbal", participantes: "Masiva", tecnologia: "Directa" },
+    { id: 12, texto: "Grupo de Telegram", lenguajes: "Mixto", participantes: "Grupal", tecnologia: "Interactiva" },
+    { id: 13, texto: "Discurso político en una plaza", lenguajes: "Mixto", participantes: "Grupal", tecnologia: "Directa" },
+    { id: 14, texto: "Meme en Instagram", lenguajes: "Mixto", participantes: "Masiva", tecnologia: "Interactiva" },
+    { id: 15, texto: "Llamada telefónica", lenguajes: "Verbal", participantes: "Interpersonal", tecnologia: "Mediada" },
+    { id: 16, texto: "Músico callejero", lenguajes: "Mixto", participantes: "Grupal", tecnologia: "Directa" },
+    { id: 17, texto: "Mail de renuncia", lenguajes: "Verbal", participantes: "Interpersonal", tecnologia: "Mediada" },
+    { id: 18, texto: "Asamblea escolar", lenguajes: "Mixto", participantes: "Grupal", tecnologia: "Directa" },
+    { id: 19, texto: "Influencer en vivo", lenguajes: "Mixto", participantes: "Masiva", tecnologia: "Interactiva" },
+    { id: 20, texto: "Pulgar arriba en FB", lenguajes: "No verbal", participantes: "Interpersonal", tecnologia: "Interactiva" }
+];
+
+const NIVELES_INFO = { 1: { clave: "lenguajes" }, 2: { clave: "participantes" }, 3: { clave: "tecnologia" } };
+
+function shuffleArray(arr) { for (let i = arr.length-1; i>0; i--) { const j = Math.floor(Math.random()*(i+1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+
+function generarNivel(nivelNum) {
+    const clave = NIVELES_INFO[nivelNum].clave;
+    const seleccionadas = shuffleArray([...SITUACIONES]).slice(0, 5);
+    const izquierda = seleccionadas.map(s => s.texto);
+    let derecha = seleccionadas.map(s => s[clave]);
+    const derechaMezclada = shuffleArray([...derecha]);
+    const mapeo = {};
+    for (let i = 0; i < seleccionadas.length; i++) {
+        const valorCorrecto = seleccionadas[i][clave];
+        for (let j = 0; j < derechaMezclada.length; j++) {
+            if (derechaMezclada[j] === valorCorrecto && !Object.values(mapeo).includes(j)) {
+                mapeo[i] = j;
+                break;
+            }
+        }
+    }
+    return { izquierda, derecha: derechaMezclada, mapeo };
+}
+
+// Variables del juego
+let nivelActual = 1, nivelData = null, currentLeft = [], currentRight = [], pairCount = 0, totalPares = 5, score = 0;
+let gameActive = false, firstSelection = null;
+let STORAGE_KEY = "tirolesaRankingFinal";
+let seconds = 0, timerInterval = null;
+
+const ELEMENTS_COUNT = 5;
+const BASE_STEP = 5;
+let STEP_GAP = 55;
+let baseYOffset = 45;
+
+// DOM elements
+const leftContainer = document.getElementById('leftContainer');
+const rightContainer = document.getElementById('rightContainer');
+const girl = document.getElementById('girl');
+const svgLines = document.getElementById('lines');
+const messageDiv = document.getElementById('message');
+const scoreSpan = document.getElementById('score-val');
+const matchesSpan = document.getElementById('matches-count');
+const totalSpan = document.getElementById('total-count');
+const levelSpan = document.getElementById('level-val');
+const timerSpan = document.getElementById('timer-val');
+const screenStart = document.getElementById('screen-start');
+const screenEnd = document.getElementById('screen-end');
+const endTitle = document.getElementById('end-title');
+const endMessageDiv = document.getElementById('end-message');
+const finalScoreSpan = document.getElementById('final-score');
+const endButtonsDiv = document.getElementById('end-buttons');
+const playerNameInput = document.getElementById('player-name');
+const btnStartGame = document.getElementById('btn-start-game');
+const btnRestart = document.getElementById('btn-restart');
+const rankingBodyStart = document.getElementById('ranking-body-start');
+const rankingBodyEnd = document.getElementById('ranking-body-end');
+const touchControlsPanel = document.getElementById('touch-controls-panel');
+const orientationWarning = document.getElementById('orientation-warning');
+const understoodBtn = document.getElementById('understood-btn');
+
+let currentSide = null;
+let currentLevel = -1;
+
+function updateItemPositions() {
+    const gameRect = document.getElementById('game').getBoundingClientRect();
+    if (!gameRect.height || gameRect.height < 100) return;
+    const floorY = gameRect.height * 0.82;
+    baseYOffset = 40;
+    STEP_GAP = Math.min(52, (floorY - baseYOffset - 40) / ELEMENTS_COUNT);
+    if (STEP_GAP < 28) STEP_GAP = 28;
+    
+    const leftItems = leftContainer.querySelectorAll('.item-step');
+    const rightItems = rightContainer.querySelectorAll('.item-step');
+    
+    for (let i = 0; i < leftItems.length; i++) {
+        const visualBottom = baseYOffset + STEP_GAP * (ELEMENTS_COUNT - 1 - i);
+        leftItems[i].style.bottom = visualBottom + 'px';
+    }
+    for (let i = 0; i < rightItems.length; i++) {
+        const visualBottom = baseYOffset + STEP_GAP * (ELEMENTS_COUNT - 1 - i);
+        rightItems[i].style.bottom = visualBottom + 'px';
+    }
+}
+
+function createItems() {
+    leftContainer.innerHTML = '';
+    rightContainer.innerHTML = '';
+    
+    for (let i = 0; i < currentLeft.length; i++) {
+        const div = document.createElement('div');
+        div.className = 'item-step';
+        div.dataset.word = currentLeft[i];
+        div.dataset.side = 'left';
+        div.dataset.originalIdx = i;
+        div.innerHTML = '<span>' + currentLeft[i] + '</span>';
+        leftContainer.appendChild(div);
+    }
+    
+    for (let i = 0; i < currentRight.length; i++) {
+        const div = document.createElement('div');
+        div.className = 'item-step';
+        div.dataset.word = currentRight[i];
+        div.dataset.side = 'right';
+        div.dataset.originalIdx = i;
+        div.innerHTML = '<span>' + currentRight[i] + '</span>';
+        rightContainer.appendChild(div);
+    }
+    
+    setTimeout(() => updateItemPositions(), 30);
+}
+
+function updatePlayerPosition() {
+    const gameRect = document.getElementById('game').getBoundingClientRect();
+    if (!gameRect.width || gameRect.width < 100) return;
+    const floorY = gameRect.height * 0.82;
+    let x, y;
+    
+    if (currentSide === null) {
+        x = gameRect.width / 2 - 25;
+        y = floorY - 30;
+    } else {
+        const baseX = currentSide === 'left' ? gameRect.width * 0.12 : gameRect.width - gameRect.width * 0.12;
+        x = baseX - 25;
+        
+        if (currentLevel === BASE_STEP) {
+            y = floorY - 30;
+        } else if (currentLevel >= 0 && currentLevel < ELEMENTS_COUNT) {
+            const spanY = floorY - 15 - (STEP_GAP * (ELEMENTS_COUNT - 1 - currentLevel));
+            y = spanY - 52;
+        } else {
+            y = floorY - 30;
+        }
+    }
+    
+    girl.style.left = Math.max(5, Math.min(gameRect.width - 55, x)) + 'px';
+    girl.style.top = Math.max(5, Math.min(gameRect.height - 65, y)) + 'px';
+}
+
+function getCurrentItem() {
+    if (currentSide === null || currentLevel < 0 || currentLevel >= ELEMENTS_COUNT) return null;
+    const container = currentSide === 'left' ? leftContainer : rightContainer;
+    const items = container.querySelectorAll('.item-step');
+    return items[currentLevel];
+}
+
+function drawRope(leftItem, rightItem) {
+    const gameRect = document.getElementById("game").getBoundingClientRect();
+    const r1 = leftItem.getBoundingClientRect();
+    const r2 = rightItem.getBoundingClientRect();
+    const startX = r1.left + r1.width - gameRect.left - 10;
+    const startY = r1.top + r1.height/2 - gameRect.top;
+    const endX = r2.left + 10 - gameRect.left;
+    const endY = r2.top + r2.height/2 - gameRect.top;
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", startX);
+    line.setAttribute("y1", startY);
+    line.setAttribute("x2", endX);
+    line.setAttribute("y2", endY);
+    line.setAttribute("stroke", "#8B6914");
+    line.setAttribute("stroke-width", "5");
+    line.setAttribute("stroke-dasharray", "8,5");
+    svgLines.appendChild(line);
+}
+
+function selectCurrent() {
+    const item = getCurrentItem();
+    if (!item) { 
+        messageDiv.textContent = "❌ Parate sobre un elemento (niveles 0-4)";
+        return; 
+    }
+    if (item.classList.contains('matched')) {
+        messageDiv.textContent = "⚠️ Ya emparejado";
+        return;
+    }
+    if (!firstSelection) {
+        firstSelection = item;
+        item.classList.add('selected');
+        messageDiv.textContent = "✅ ¡Primera selección! Buscá la pareja en el otro cerro";
+        return;
+    }
+    if (firstSelection.dataset.side === item.dataset.side) {
+        messageDiv.textContent = "❌ La segunda debe estar en el otro cerro";
+        return;
+    }
+    
+    const leftItem = firstSelection.dataset.side === 'left' ? firstSelection : item;
+    const rightItem = firstSelection.dataset.side === 'right' ? firstSelection : item;
+    const leftIdx = parseInt(leftItem.dataset.originalIdx);
+    const rightIdx = parseInt(rightItem.dataset.originalIdx);
+    
+    if (nivelData.mapeo[leftIdx] === rightIdx) {
+        leftItem.classList.remove('selected');
+        leftItem.classList.add('matched');
+        rightItem.classList.add('matched');
+        drawRope(leftItem, rightItem);
+        firstSelection = null;
+        pairCount++;
+        score += 100;
+        matchesSpan.innerText = pairCount;
+        scoreSpan.innerText = score;
+        messageDiv.textContent = "✅ ¡Correcto! Tirolesa instalada";
+        
+        if (pairCount === totalPares) {
+            if (nivelActual === 3) {
+                finishGame(true);
+            } else {
+                nivelActual++;
+                cargarNivel(nivelActual);
+                messageDiv.textContent = `🌟 ¡Nivel ${nivelActual-1} completado! Ahora Nivel ${nivelActual} 🌟`;
+            }
+        }
+    } else {
+        messageDiv.textContent = "❌ Incorrecto. Esa no es la pareja correcta";
+        const tempItem = item;
+        tempItem.classList.add('selected');
+        setTimeout(() => { tempItem.classList.remove('selected'); }, 400);
+    }
+}
+
+function cargarNivel(nivel) {
+    nivelData = generarNivel(nivel);
+    levelSpan.innerText = nivel;
+    currentLeft = nivelData.izquierda;
+    currentRight = nivelData.derecha;
+    pairCount = 0;
+    score = 0;
+    firstSelection = null;
+    currentSide = null;
+    currentLevel = -1;
+    totalSpan.innerText = "5";
+    matchesSpan.innerText = "0";
+    scoreSpan.innerText = "0";
+    createItems();
+    svgLines.innerHTML = '';
+    messageDiv.textContent = `Nivel ${nivel} - Centro: ⬅️➡️ para subir al cerro`;
+    setTimeout(() => {
+        updateItemPositions();
+        updatePlayerPosition();
+    }, 50);
+}
+
+function finishGame(isVictory) {
+    if (!gameActive) return;
+    gameActive = false;
+    if (timerInterval) clearInterval(timerInterval);
+    touchControlsPanel.classList.add('hidden-controls');
+    finalScoreSpan.innerText = score;
+    
+    if (isVictory) {
+        endTitle.innerText = "🏆 ¡VICTORIA! 🏆";
+        const mins = Math.floor(seconds / 60);
+        const segs = seconds % 60;
+        endMessageDiv.innerText = `¡Completaste los 3 niveles en ${mins}:${segs.toString().padStart(2,'0')}!`;
+        
+        const nombre = playerNameInput.value.trim() || "ANÓNIMO";
+        saveScoreToRanking(nombre, seconds);
+        
+        if (!document.getElementById('btn-continue')) {
+            const continueLink = document.createElement('a');
+            continueLink.id = 'btn-continue';
+            continueLink.textContent = '🚗 SEGUIR VIAJE';
+            continueLink.href = "https://sites.google.com/view/materialestfi/potrerillos/insignia-potr";
+            continueLink.target = "_blank";
+            continueLink.rel = "noopener noreferrer";
+            continueLink.style.background = "#2e8b57";
+            continueLink.style.border = "none";
+            continueLink.style.padding = "10px 20px";
+            continueLink.style.borderRadius = "40px";
+            continueLink.style.color = "white";
+            continueLink.style.fontWeight = "bold";
+            continueLink.style.fontFamily = "monospace";
+            continueLink.style.fontSize = "0.9rem";
+            continueLink.style.cursor = "pointer";
+            continueLink.style.margin = "5px";
+            continueLink.style.boxShadow = "0 3px 0 #1a5a3a";
+            continueLink.style.textDecoration = "none";
+            continueLink.style.display = "inline-block";
+            endButtonsDiv.appendChild(continueLink);
+        }
+    } else {
+        endTitle.innerText = "💥 ¡TIEMPO AGOTADO!";
+        endMessageDiv.innerText = "No completaste todas las parejas a tiempo.\n¡Volvé a intentarlo!";
+    }
+    
+    updateRankingTables();
+    screenEnd.classList.remove('hidden');
+}
+
+function startGame() {
+    if (gameActive) return;
+    score = 0;
+    seconds = 0;
+    nivelActual = 1;
+    gameActive = true;
+    screenStart.classList.add('hidden');
+    screenEnd.classList.add('hidden');
+    touchControlsPanel.classList.remove('hidden-controls');
+    
+    const oldContinue = document.getElementById('btn-continue');
+    if (oldContinue) oldContinue.remove();
+    
+    cargarNivel(1);
+    
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (!gameActive) return;
+        seconds++;
+        let min = String(Math.floor(seconds/60)).padStart(2,"0");
+        let sec = String(seconds%60).padStart(2,"0");
+        timerSpan.innerText = `${min}:${sec}`;
+        
+        if (seconds >= 300 && gameActive) {
+            finishGame(false);
+        }
+    }, 1000);
+}
+
+function restartGame() {
+    startGame();
+}
+
+// RANKING
+function getRanking() { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+function saveScoreToRanking(name, timeSec) { let r = getRanking(); r.push({ name: name.toUpperCase(), time: timeSec }); r.sort((a,b) => a.time - b.time); localStorage.setItem(STORAGE_KEY, JSON.stringify(r.slice(0,5))); }
+function updateRankingTables() {
+    let r = getRanking();
+    const update = (tbody) => {
+        if(!tbody) return; tbody.innerHTML = ''; if(r.length===0) { tbody.innerHTML = '<tr><td colspan="3">✨ Sin registros ✨</td>' + '<tr>'; return; }
+        r.forEach((e,i) => { let mins = Math.floor(e.time/60), secs = e.time%60; let timeStr = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`; tbody.innerHTML += `<tr><td>${i+1}</td><td>${e.name}</td><td>${timeStr}</td>`; });
+    };
+    update(rankingBodyStart); update(rankingBodyEnd);
+}
+
+// CONTROLES TECLADO
+document.addEventListener("keydown", (e) => {
+    if (!gameActive) return;
+    
+    switch (e.key) {
+        case "ArrowLeft":
+            e.preventDefault();
+            if (currentSide === null) {
+                currentSide = "left";
+                currentLevel = BASE_STEP;
+                updatePlayerPosition();
+                messageDiv.textContent = "🗻 Cerro izquierdo - Base (nivel 5) · ⬆️ para subir";
+            } else if (currentSide !== null && currentLevel === BASE_STEP) {
+                currentSide = null;
+                currentLevel = -1;
+                updatePlayerPosition();
+                messageDiv.textContent = "🔘 Centro · ⬅️ izquierda · ➡️ derecha";
+            } else {
+                messageDiv.textContent = "⚠️ Solo volvés al centro desde la base (nivel 5)";
+            }
+            break;
+        case "ArrowRight":
+            e.preventDefault();
+            if (currentSide === null) {
+                currentSide = "right";
+                currentLevel = BASE_STEP;
+                updatePlayerPosition();
+                messageDiv.textContent = "🗻 Cerro derecho - Base (nivel 5) · ⬆️ para subir";
+            } else if (currentSide !== null && currentLevel === BASE_STEP) {
+                currentSide = null;
+                currentLevel = -1;
+                updatePlayerPosition();
+                messageDiv.textContent = "🔘 Centro · ⬅️ izquierda · ➡️ derecha";
+            } else {
+                messageDiv.textContent = "⚠️ Solo volvés al centro desde la base (nivel 5)";
+            }
+            break;
+        case "ArrowUp":
+            e.preventDefault();
+            if (currentSide !== null) {
+                if (currentLevel === BASE_STEP) {
+                    currentLevel = ELEMENTS_COUNT - 1;
+                    updatePlayerPosition();
+                    messageDiv.textContent = "📋 Nivel 4 - Elemento · ⬆️⬇️ mover, ENTER seleccionar";
+                } else if (currentLevel > 0 && currentLevel < ELEMENTS_COUNT) {
+                    currentLevel--;
+                    updatePlayerPosition();
+                    messageDiv.textContent = `📋 Nivel ${currentLevel} - Elemento · ⬆️⬇️ mover, ENTER seleccionar`;
+                } else if (currentLevel === 0) {
+                    messageDiv.textContent = "⛰️ Estás en la cima (nivel 0). Solo podés bajar con ⬇️";
+                }
+            }
+            break;
+        case "ArrowDown":
+            e.preventDefault();
+            if (currentSide !== null) {
+                if (currentLevel === 0) {
+                    currentLevel = 1;
+                    updatePlayerPosition();
+                    messageDiv.textContent = `📋 Nivel ${currentLevel} - Elemento · ⬆️⬇️ mover, ENTER seleccionar`;
+                } else if (currentLevel > 0 && currentLevel < ELEMENTS_COUNT - 1) {
+                    currentLevel++;
+                    updatePlayerPosition();
+                    messageDiv.textContent = `📋 Nivel ${currentLevel} - Elemento · ⬆️⬇️ mover, ENTER seleccionar`;
+                } else if (currentLevel === ELEMENTS_COUNT - 1) {
+                    currentLevel = BASE_STEP;
+                    updatePlayerPosition();
+                    messageDiv.textContent = "🏠 Base (nivel 5) · ⬅️➡️ para volver al centro, ⬆️ para subir";
+                }
+            }
+            break;
+        case "Enter":
+            e.preventDefault();
+            if (currentSide !== null && currentLevel >= 0 && currentLevel < ELEMENTS_COUNT) {
+                selectCurrent();
+            } else if (currentSide !== null && currentLevel === BASE_STEP) {
+                messageDiv.textContent = "⚠️ Estás en la base. Usá ⬆️ para subir a los elementos";
+            } else if (currentSide === null) {
+                messageDiv.textContent = "⚠️ Estás en el centro. Usá ⬅️ o ➡️ para subir a un cerro";
+            }
+            break;
+    }
+});
+
+// CONTROLES TÁCTILES
+const touchUp = document.getElementById('touch-up');
+const touchDown = document.getElementById('touch-down');
+const touchLeft = document.getElementById('touch-left');
+const touchRight = document.getElementById('touch-right');
+const touchEnter = document.getElementById('touch-enter');
+
+let touchLeftPressed = false, touchRightPressed = false, touchUpPressed = false, touchDownPressed = false;
+
+function handleTouchAction() {
+    if (!gameActive) return;
+    if (touchLeftPressed) {
+        if (currentSide === null) { currentSide = "left"; currentLevel = BASE_STEP; updatePlayerPosition(); messageDiv.textContent = "🗻 Cerro izquierdo"; }
+        else if (currentSide !== null && currentLevel === BASE_STEP) { currentSide = null; currentLevel = -1; updatePlayerPosition(); messageDiv.textContent = "🔘 Centro"; }
+        touchLeftPressed = false;
+    }
+    if (touchRightPressed) {
+        if (currentSide === null) { currentSide = "right"; currentLevel = BASE_STEP; updatePlayerPosition(); messageDiv.textContent = "🗻 Cerro derecho"; }
+        else if (currentSide !== null && currentLevel === BASE_STEP) { currentSide = null; currentLevel = -1; updatePlayerPosition(); messageDiv.textContent = "🔘 Centro"; }
+        touchRightPressed = false;
+    }
+    if (touchUpPressed && currentSide !== null) {
+        if (currentLevel === BASE_STEP) { currentLevel = ELEMENTS_COUNT - 1; updatePlayerPosition(); }
+        else if (currentLevel > 0 && currentLevel < ELEMENTS_COUNT) { currentLevel--; updatePlayerPosition(); }
+        touchUpPressed = false;
+    }
+    if (touchDownPressed && currentSide !== null) {
+        if (currentLevel === 0) { currentLevel = 1; updatePlayerPosition(); }
+        else if (currentLevel > 0 && currentLevel < ELEMENTS_COUNT - 1) { currentLevel++; updatePlayerPosition(); }
+        else if (currentLevel === ELEMENTS_COUNT - 1) { currentLevel = BASE_STEP; updatePlayerPosition(); }
+        touchDownPressed = false;
+    }
+}
+
+setInterval(() => { handleTouchAction(); }, 100);
+
+if (touchLeft) {
+    touchLeft.addEventListener('touchstart', (e) => { e.preventDefault(); touchLeftPressed = true; });
+    touchLeft.addEventListener('mousedown', () => { touchLeftPressed = true; });
+}
+if (touchRight) {
+    touchRight.addEventListener('touchstart', (e) => { e.preventDefault(); touchRightPressed = true; });
+    touchRight.addEventListener('mousedown', () => { touchRightPressed = true; });
+}
+if (touchUp) {
+    touchUp.addEventListener('touchstart', (e) => { e.preventDefault(); touchUpPressed = true; });
+    touchUp.addEventListener('mousedown', () => { touchUpPressed = true; });
+}
+if (touchDown) {
+    touchDown.addEventListener('touchstart', (e) => { e.preventDefault(); touchDownPressed = true; });
+    touchDown.addEventListener('mousedown', () => { touchDownPressed = true; });
+}
+if (touchEnter) {
+    touchEnter.addEventListener('click', () => { if (gameActive && currentSide !== null && currentLevel >= 0 && currentLevel < ELEMENTS_COUNT) selectCurrent(); });
+    touchEnter.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameActive && currentSide !== null && currentLevel >= 0 && currentLevel < ELEMENTS_COUNT) selectCurrent(); });
+}
+// Orientación para móvil
+let warningVisible = false;
+function checkOrientation() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if (!isMobile) return;
+    const isLandscape = window.innerWidth > window.innerHeight;
+    if (!isLandscape && !warningVisible) {
+        orientationWarning.classList.add('show');
+        warningVisible = true;
+    } else if (isLandscape && warningVisible) {
+        orientationWarning.classList.remove('show');
+        warningVisible = false;
+    }
+}
+understoodBtn.addEventListener('click', () => {
+    orientationWarning.classList.remove('show');
+    warningVisible = false;
+});
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 50));
+checkOrientation();
+
+btnStartGame.addEventListener('click', startGame);
+btnRestart.addEventListener('click', restartGame);
+updateRankingTables();
+
+window.addEventListener('resize', () => {
+    if (gameActive) {
+        updateItemPositions();
+        updatePlayerPosition();
+    }
+});
+</script>
+</body>
+</html>
