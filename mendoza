@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Rompecabezas de Otoño - Mendoza | Puzzle Horizontal</title>
+    <style>
+        * {
+            user-select: none;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: linear-gradient(135deg, #c97e2a, #8b5a2b);
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Orbitron', monospace;
+        }
+
+        #main-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* Pantallas comunes */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #0a2a3a, #061a2a);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            backdrop-filter: blur(2px);
+            overflow-y: auto;
+            padding: 16px;
+            box-sizing: border-box;
+        }
+        .screen.hidden { display: none; }
+        .screen h1 { color: #ffdd99; font-size: clamp(1.2rem, 5vh, 1.8rem); text-shadow: 0 0 10px #ffaa33; margin-bottom: 15px; text-align: center; }
+        .ranking-table { background: #0a1a2a; border-radius: 16px; padding: 12px; margin: 12px 0; border: 1px solid #ffaa33; width: 90%; max-width: 400px; }
+        .ranking-table table { width: 100%; border-collapse: collapse; color: #bbf0ff; font-size: clamp(0.65rem, 2.5vh, 0.85rem); }
+        .ranking-table th, .ranking-table td { padding: 6px; text-align: center; border-bottom: 1px solid #2a5a6a; }
+        .ranking-table th { color: #ffbc6e; }
+        input { padding: 10px 18px; border-radius: 40px; border: none; background: #fff8e8; font-size: clamp(0.75rem, 3vh, 0.95rem); text-align: center; margin: 10px 0; font-family: monospace; width: 80%; max-width: 240px; }
+        button { background: #daa520; border: none; padding: 10px 20px; border-radius: 40px; color: white; font-weight: bold; font-family: monospace; font-size: clamp(0.75rem, 3vh, 0.95rem); cursor: pointer; margin: 5px; transition: 0.1s; box-shadow: 0 3px 0 #8a5618; }
+        button:active { transform: translateY(2px); box-shadow: none; }
+        .btn-group { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+
+        /* Área de juego de recolección (vertical) */
+        #gameArea {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #8B6914, #6a8a2a);
+        }
+        .autumn-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(circle at 10% 20%, rgba(255,100,0,0.15) 2%, transparent 2.5%),
+                radial-gradient(circle at 30% 50%, rgba(255,150,0,0.12) 1.5%, transparent 2%),
+                repeating-linear-gradient(45deg, rgba(180,100,20,0.05) 0px, rgba(180,100,20,0.05) 2px, transparent 2px, transparent 8px);
+        }
+        .sun {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: clamp(50px, 15vw, 80px);
+            height: clamp(50px, 15vw, 80px);
+            background: radial-gradient(circle, #ff8800, #ff5500);
+            border-radius: 50%;
+            animation: sunGlow 2s infinite alternate;
+            z-index: 2;
+        }
+        @keyframes sunGlow {
+            0% { transform: scale(1); box-shadow: 0 0 20px #ff6600; }
+            100% { transform: scale(1.05); box-shadow: 0 0 50px #ffaa33; }
+        }
+        .tree {
+            position: absolute;
+            font-size: clamp(35px, 10vw, 60px);
+            z-index: 2;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.2));
+            pointer-events: none;
+        }
+        .static-leaf {
+            position: absolute;
+            font-size: clamp(18px, 5vw, 24px);
+            z-index: 1;
+            opacity: 0.6;
+            pointer-events: none;
+            animation: floatLeaf 4s infinite alternate;
+        }
+        @keyframes floatLeaf {
+            0% { transform: translateY(0px) rotate(0deg); }
+            100% { transform: translateY(15px) rotate(10deg); }
+        }
+        #player {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            font-size: clamp(38px, 10vw, 48px);
+            transition: left 0.05s linear;
+            z-index: 100;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.3));
+            transform: translateX(-50%);
+        }
+        .leaf {
+            position: absolute;
+            font-size: clamp(20px, 6vw, 28px);
+            animation: fall linear forwards;
+            z-index: 50;
+            cursor: pointer;
+            text-align: center;
+            filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));
+            color: white;
+            text-shadow: 1px 1px 0 #000;
+            font-weight: bold;
+            white-space: nowrap;
+            pointer-events: auto;
+        }
+        @keyframes fall {
+            0% { top: -50px; transform: rotate(0deg); }
+            100% { top: 100vh; transform: rotate(360deg); }
+        }
+        #inventory {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.85);
+            padding: 8px 10px;
+            border-radius: 16px;
+            color: #ffdd99;
+            font-size: 10px;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+            width: 180px;
+            max-height: 70vh;
+            overflow-y: auto;
+            border: 1px solid #ffaa66;
+        }
+        #inventory h4 { margin: 0 0 5px 0; font-size: 11px; color: #ffaa66; border-bottom: 1px solid #ffaa66; }
+        .word-list { list-style: none; padding: 0; margin: 0; text-align: left; }
+        .word-list li { font-size: 9px; padding: 2px 3px; }
+        .word-list li.missing { color: #ff6666; background: rgba(255,0,0,0.15); }
+        .word-list li.collected { color: #66ff66; background: rgba(0,255,0,0.1); text-decoration: line-through; }
+        #hud {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 6px 12px;
+            border-radius: 40px;
+            color: #ffdd99;
+            font-size: 12px;
+            z-index: 100;
+        }
+        #message {
+            position: absolute;
+            bottom: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: #ffdd99;
+            padding: 6px 16px;
+            border-radius: 40px;
+            font-size: 11px;
+            white-space: nowrap;
+            z-index: 100;
+        }
+        
+        /* CONTROLES TÁCTILES EN ESQUINAS - NUEVO ESTILO */
+        .touch-btn-corner {
+            position: fixed;
+            bottom: 85px;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            border: 2px solid #ffcc44;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 38px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #124263;
+            transition: 0.03s linear;
+            user-select: none;
+            touch-action: manipulation;
+            z-index: 150;
+            pointer-events: auto;
+        }
+        
+        .touch-btn-corner:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+        
+        .touch-left-corner {
+            left: 25px;
+        }
+        
+        .touch-right-corner {
+            right: 25px;
+        }
+        
+        .hidden-controls {
+            display: none !important;
+        }
+        
+        @media (max-width: 600px) {
+            .touch-btn-corner {
+                width: 60px;
+                height: 60px;
+                font-size: 32px;
+                bottom: 15px;
+            }
+            .touch-left-corner {
+                left: 15px;
+            }
+            .touch-right-corner {
+                right: 15px;
+            }
+        }
+
+        /* ======================================================== */
+        /* PANTALLA DEL PUZZLE - HORIZONTAL (tiles cuadradas) */
+        /* ======================================================== */
+        .puzzle-screen-wrapper {
+            background: #fdf0df;
+            border-radius: 20px;
+            padding: 12px;
+            width: 98%;
+            max-width: 1400px;
+            border: 2px solid #e6b87a;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-height: 96vh;
+            overflow-y: auto;
+        }
+        
+        /* Contenedor principal - flexible en horizontal */
+        .puzzle-main-container {
+            display: flex;
+            flex-direction: row;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        /* Panel lateral */
+        .puzzle-stats-panel {
+            flex: 1;
+            min-width: 200px;
+            background: #fff8e8;
+            border-radius: 20px;
+            padding: 12px;
+            border: 1px solid #daa520;
+        }
+        
+        .stats-panel {
+            background: #ffecce;
+            border-radius: 30px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            text-align: center;
+            border: 1px solid #daa520;
+            color: #5a3a1a;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        
+        /* Grid del puzzle - TILES CUADRADAS (aspect-ratio 1:1) */
+        .puzzle-grid-wrapper {
+            flex: 2;
+            min-width: 320px;
+            display: flex;
+            justify-content: center;
+            background: #fdf0df;
+            border-radius: 20px;
+            padding: 10px;
+        }
+        
+        .puzzle-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            background: #f7e5ce;
+            padding: 12px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 550px;
+        }
+        
+        /* CADA TILE ES PERFECTAMENTE CUADRADA */
+        .puzzle-tile {
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(145deg, #ffe8c0, #ffd8a0);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #a55a1a;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            border: 1px solid #e6c394;
+            text-align: center;
+            padding: 6px;
+            white-space: pre-line;
+            line-height: 1.3;
+            word-break: break-word;
+        }
+        
+        .puzzle-tile.selected {
+            background: #ffe0a3;
+            box-shadow: 0 0 0 3px #f0a020;
+            transform: scale(1.02);
+        }
+        
+        .ranking-box {
+            background: #0a1a2a;
+            border-radius: 16px;
+            padding: 12px;
+            border: 1px solid #ffaa33;
+            width: 100%;
+            max-width: 280px;
+            margin: 5px;
+        }
+        .ranking-box h3 {
+            color: #ffbc6e;
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+        }
+        .global-msg {
+            background: #ffe0b8;
+            padding: 8px;
+            border-radius: 40px;
+            text-align: center;
+            font-size: 0.7rem;
+            margin-top: 10px;
+        }
+        
+        /* Responsive: en móvil horizontal, el puzzle se ve perfecto */
+        @media (max-width: 700px) and (orientation: landscape) {
+            .puzzle-screen-wrapper {
+                padding: 8px;
+            }
+            .puzzle-main-container {
+                flex-direction: row;
+                gap: 10px;
+            }
+            .puzzle-stats-panel {
+                min-width: 160px;
+                padding: 8px;
+            }
+            .puzzle-grid-wrapper {
+                min-width: 280px;
+                padding: 5px;
+            }
+            .puzzle-container {
+                gap: 5px;
+                padding: 8px;
+                max-width: 450px;
+            }
+            .puzzle-tile {
+                font-size: 8px;
+                padding: 3px;
+            }
+            .stats-panel {
+                padding: 5px 8px;
+                font-size: 0.7rem;
+            }
+            .btn-group button {
+                padding: 6px 12px;
+                font-size: 0.7rem;
+            }
+        }
+        
+        /* En móvil vertical del puzzle, mostrar advertencia */
+        @media (max-width: 700px) and (orientation: portrait) {
+            .puzzle-screen-wrapper {
+                display: none;
+            }
+            .puzzle-warning {
+                display: flex;
+            }
+        }
+        
+        .puzzle-warning {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            background: #fdf0df;
+            border-radius: 30px;
+            color: #8b5a2b;
+        }
+        .puzzle-warning span {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+        .puzzle-warning p {
+            font-size: 1rem;
+            margin: 5px;
+        }
+        
+        /* Advertencia de orientación general */
+        .orientation-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000000ee;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+            font-family: monospace;
+            text-align: center;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+        .orientation-warning.show { display: flex; }
+        .orientation-warning span { font-size: 4rem; margin-bottom: 20px; }
+        .orientation-warning p { font-size: 1.2rem; background: none; margin: 10px; }
+        .orientation-warning button { background: #daa520; margin-top: 20px; padding: 12px 24px; font-size: 1rem; }
+    </style>
+</head>
+<body>
+<div id="main-wrapper">
+    <!-- PANTALLA 1: INICIO -->
+    <div id="screen-start" class="screen">
+        <h1>🍂 Rompecabezas de otoño 🍂</h1>
+        <p style="color:#bbf0ff; text-align:center; padding:0 20px;">Atrapá las 14 hojas con conceptos de comunicación <br> ¡No te distraigas con las atracciones del parque! 😂</p>
+        <input type="text" id="player-name" placeholder="NOMBRE DEL JUGADOR" maxlength="20">
+        <button id="btn-start-game" style="background:#8b5a2b;">🍂 INICIAR RECOLECCIÓN</button>
+        <p style="font-size:0.65rem; margin-top:10px;">📱 Gira el celular a HORIZONTAL · ⬅️ ➡️ teclado o botones táctiles</p>
+        <p> 🙂 CC BY-NC-SA </p>
+    </div>
+
+    <!-- PANTALLA 2: JUEGO DE RECOLECCIÓN -->
+    <div id="gameArea" style="display: none;">
+        <div class="autumn-pattern"></div>
+        <div class="sun"></div>
+        <div class="tree" style="left: 5%; bottom: 0;">🌳🍂</div>
+        <div class="tree" style="left: 20%; bottom: 0;">🍁🌲</div>
+        <div class="tree" style="left: 75%; bottom: 0;">🍂🌳</div>
+        <div class="tree" style="left: 88%; bottom: 0;">🌲🍁</div>
+        <div class="tree" style="left: 45%; bottom: -20px;">🌳🍂</div>
+        <div class="static-leaf" style="left: 10%; top: 20%;">🍂</div>
+        <div class="static-leaf" style="left: 25%; top: 50%;">🍁</div>
+        <div class="static-leaf" style="left: 60%; top: 15%;">🍂</div>
+        <div class="static-leaf" style="left: 80%; top: 45%;">🍁</div>
+        <div class="static-leaf" style="left: 35%; top: 70%;">🍂</div>
+        <div class="static-leaf" style="left: 70%; top: 80%;">🍁</div>
+        <div class="static-leaf" style="left: 50%; top: 35%;">🍂</div>
+        <div id="inventory">
+            <h4>📜 CONCEPTOS A RECOLECTAR</h4>
+            <ul class="word-list" id="word-list"></ul>
+        </div>
+        <div id="hud">⏱️ TIEMPO: <span id="game-timer">00:00</span></div>
+        <div id="message">⬅️ ➡️ mover · Atrapá las hojas</div>
+        <div id="player">🧘‍♀️</div>
+        
+        <!-- CONTROLES TÁCTILES EN ESQUINAS -->
+        <div id="touch-left-corner" class="touch-btn-corner touch-left-corner hidden-controls">◀</div>
+        <div id="touch-right-corner" class="touch-btn-corner touch-right-corner hidden-controls">▶</div>
+    </div>
+
+    <!-- PANTALLA 3: TRANSICIÓN -->
+    <div id="screen-transition" class="screen hidden">
+        <h1>🍂 ¡FELICITACIONES! 🍂</h1>
+        <p style="color:#bbf0ff; text-align:center; padding:0 20px; font-size:1rem;">¡Conseguiste las 14 hojas!</p>
+        <p style="color:#ffdd99; text-align:center; margin-bottom:20px;">Ahora que tenés todas las piezas, podés armá el puzzle del Modelo Semiótico de Comunicación.</p>
+        <button id="btn-go-puzzle" style="background:#8b5a2b;">🧩 COMENZAR PUZZLE 🧩</button>
+    </div>
+
+    <!-- PANTALLA 4: PUZZLE (HORIZONTAL) -->
+    <div id="screen-puzzle" class="screen hidden">
+        <div class="puzzle-screen-wrapper">
+            <div class="puzzle-warning" id="puzzle-warning">
+                <span>📱🔄</span>
+                <p>Para jugar al puzzle, girá el celular a HORIZONTAL</p>
+                <p>Las fichas se verán cuadradas y perfectas</p>
+            </div>
+            <div id="puzzle-content" style="display: block;">
+                <div style="text-align:center; margin-bottom:8px;">
+                    <h1 style="color:#e8720a; font-size:1.2rem;">🧩 Modelo Semiótico 🧩</h1>
+                </div>
+                <div class="puzzle-main-container">
+                    <div class="puzzle-stats-panel">
+                        <div class="stats-panel">
+                            <p>⏱️ TIEMPO: <span id="timerDisplay">0.0</span> seg</p>
+                            <p>🔄 MOVIMIENTOS: <span id="movesCount">0</span></p>
+                        </div>
+                        <div class="btn-group">
+                            <button id="startBtn" style="background:#d9942a;">🚀 INICIAR</button>
+                            <button id="resetPuzzleBtn" style="background:#c97a5a;">🔄 REINICIAR</button>
+                        </div>
+                        <div class="stats-panel">
+                            <p>👤 JUGADOR: <span id="puzzlePlayerNameDisplay">---</span></p>
+                        </div>
+                        <div id="globalMsg" class="global-msg"></div>
+                    </div>
+                    <div class="puzzle-grid-wrapper">
+                        <div class="puzzle-container" id="puzzleGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PANTALLA 5: VICTORIA -->
+    <div id="screen-victory" class="screen hidden">
+        <h1>🏆 ¡VICTORIA! 🏆</h1>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px;">
+            <div class="ranking-box">
+                <h3>🍂 RANKING RECOLECCIÓN</h3>
+                <table style="width:100%; color:#bbf0ff; font-size:0.7rem;">
+                    <thead><tr><th>#</th><th>JUGADOR</th><th>TIEMPO</th></tr></thead>
+                    <tbody id="ranking-body-start2"></tbody>
+                </table>
+            </div>
+            <div class="ranking-box">
+                <h3>🧩 RANKING (MOVIMIENTOS)</h3>
+                <table style="width:100%; color:#bbf0ff; font-size:0.7rem;">
+                    <thead><tr><th>#</th><th>JUGADOR</th><th>MOV.</th></tr></thead>
+                    <tbody id="ranking-body-end"></tbody>
+                </table>
+            </div>
+            <div class="ranking-box">
+                <h3>⏱️ RANKING (TIEMPO)</h3>
+                <table style="width:100%; color:#bbf0ff; font-size:0.7rem;">
+                    <thead><tr><th>#</th><th>JUGADOR</th><th>TIEMPO</th></tr></thead>
+                    <tbody id="ranking-body-puzzle-time"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="btn-group" id="victory-buttons">
+            <button id="btn-restart" style="background:#daa520;">🍂 REINICIAR TODO</button>
+            <a id="btn-continue" href="https://sites.google.com/view/materialestfi/mendoza/insignia-mdza" target="_blank" rel="noopener noreferrer" style="background:#5a8a3a; border:none; padding:10px 20px; border-radius:40px; color:white; font-weight:bold; font-family:monospace; font-size:0.8rem; cursor:pointer; margin:5px; box-shadow:0 3px 0 #1a5a3a; text-decoration:none; display:inline-block;">🚗 CONTINUAR VIAJE</a>
+        </div>
+    </div>
+</div>
+
+<!-- Advertencia de orientación para recolección -->
+<div id="orientation-warning" class="orientation-warning">
+    <span>📱🔄</span>
+    <p>Por favor, girá el dispositivo a posición HORIZONTAL<br>para jugar al Rompecabezas de Otoño</p>
+    <button id="understood-btn">Entendido</button>
+</div>
+
+<script>
+    // PALABRAS BUENAS (14)
+    const GOOD_WORDS = [
+        "Ámbito", "sociocultural", "Sujeto 1", "Mensaje", "Sujeto 2", "Querer decir",
+        "Directa", "Mediada", "Querer comprender", "Conocimientos", "creencias", "mundo",
+        "Modelo de contexto", "Contexto"
+    ];
+
+    const BAD_WORDS_LIST = [
+        "Fuente de los Continentes", "Feria Artesanal", "Museo", "Bicicleta", "Perrito", "Rosedal", "Calesita", "Acequia",
+        "Helado", "Patines", "Churros", "Atardecer", "Cancha", "Pulgarcito", "Payaso"
+    ];
+
+    // Variables recolección
+    let gameActive = false;
+    let collected = [];
+    let collectionSeconds = 0;
+    let gameTimer = null;
+    let spawnInterval = null;
+    let playerX = 50;
+    let leaves = [];
+    const STORAGE_KEY = "autumnRanking";
+    const STORAGE_KEY_PUZZLE_MOVES = "autumnPuzzleMovesRanking";
+    const STORAGE_KEY_PUZZLE_TIME = "puzzleTimeRanking";
+
+    // Variables puzzle
+    let puzzleBoard = [], puzzleSelected = null, puzzleMoves = 0, puzzleGameActive = false, puzzleGameCompleted = false;
+    let puzzleStartTime = null, puzzleTimerInterval = null;
+    const ROWS = 4, COLS = 5;
+    const TARGET_WORDS = [
+        "oooooo\nModelo de\nContexto S1\nooooo↘️\n", "\n>>>>>>>>>\n\n\n", "\n>>Ámbito<<\nsociocultural\n\n", "\n<<<<<<<<<\n\n\n",
+        "oooooo\nModelo de\nContexto S2\n↙️ooooo\n", ">\n>\n>👩🏻\n>\n>", "\nSUJETO 1\n👩🏻👦🏻👩🏻‍🦰\n(indiv. o col.)\n",
+        "💬📲💻✆➤\nMENSAJE\nconformado\nmediante\nun lenguaje", "\nSUJETO 2\n🧑‍👦🏻‍👧🏻\n(indiv. o col.)\n", "<\n<\n🧑<\n<\n<",
+        ">\n>\n>\n>\n>", "querer\ndecir\n\n\n", "\n\ndirecta o mediada\n\n", "querer\ncomprender\n\n\n", "<\n<\n<\n<\n<",
+        "\n>\n>\n>\n....>>>>", "-------------\nconocimientos\n-------------\n\n>>>>>>>>>>", "-------------\ny creencias\n-------------\n\n>>>>><<<<",
+        "-------------\ns/ el mundo\n-------------\n\n<<<<<<<<<<", "\n<\n<\n<\n<<<<...."
+    ];
+
+    // DOM
+    const screenStart = document.getElementById('screen-start');
+    const gameArea = document.getElementById('gameArea');
+    const screenTransition = document.getElementById('screen-transition');
+    const screenPuzzle = document.getElementById('screen-puzzle');
+    const screenVictory = document.getElementById('screen-victory');
+    const playerDiv = document.getElementById('player');
+    const gameTimerSpan = document.getElementById('game-timer');
+    const messageDiv = document.getElementById('message');
+    const playerNameInput = document.getElementById('player-name');
+    const btnStart = document.getElementById('btn-start-game');
+    const btnRestart = document.getElementById('btn-restart');
+    const btnGoPuzzle = document.getElementById('btn-go-puzzle');
+    const rankingBodyStart2 = document.getElementById('ranking-body-start2');
+    const rankingBodyEnd = document.getElementById('ranking-body-end');
+    const rankingBodyPuzzleTime = document.getElementById('ranking-body-puzzle-time');
+    const puzzleGrid = document.getElementById('puzzleGrid');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const movesSpan = document.getElementById('movesCount');
+    const startPuzzleBtn = document.getElementById('startBtn');
+    const resetPuzzleBtn = document.getElementById('resetPuzzleBtn');
+    const globalMsgPuzzle = document.getElementById('globalMsg');
+    const puzzlePlayerNameDisplay = document.getElementById('puzzlePlayerNameDisplay');
+    const orientationWarning = document.getElementById('orientation-warning');
+    const understoodBtn = document.getElementById('understood-btn');
+    const puzzleWarning = document.getElementById('puzzle-warning');
+    const puzzleContent = document.getElementById('puzzle-content');
+    
+    // Nuevos elementos de controles táctiles en esquinas
+    const touchLeftCorner = document.getElementById('touch-left-corner');
+    const touchRightCorner = document.getElementById('touch-right-corner');
+
+    // Ranking
+    function getRanking() { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    function getPuzzleMovesRanking() { return JSON.parse(localStorage.getItem(STORAGE_KEY_PUZZLE_MOVES)) || []; }
+    function getPuzzleTimeRanking() { return JSON.parse(localStorage.getItem(STORAGE_KEY_PUZZLE_TIME)) || []; }
+
+    function saveScoreToRanking(name, timeSec) {
+        let r = getRanking();
+        r.push({ name: name.toUpperCase(), time: timeSec });
+        r.sort((a, b) => a.time - b.time);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(r.slice(0, 5)));
+    }
+
+    function savePuzzleMovesToRanking(name, moves) {
+        let r = getPuzzleMovesRanking();
+        r.push({ name: name.toUpperCase(), moves: moves });
+        r.sort((a, b) => a.moves - b.moves);
+        localStorage.setItem(STORAGE_KEY_PUZZLE_MOVES, JSON.stringify(r.slice(0, 5)));
+    }
+
+    function savePuzzleTimeToRanking(name, timeSec) {
+        let r = getPuzzleTimeRanking();
+        r.push({ name: name.toUpperCase(), time: timeSec });
+        r.sort((a, b) => a.time - b.time);
+        localStorage.setItem(STORAGE_KEY_PUZZLE_TIME, JSON.stringify(r.slice(0, 5)));
+    }
+
+    function updateRankingTables() {
+        let rCollect = getRanking();
+        if (rankingBodyStart2) {
+            rankingBodyStart2.innerHTML = '';
+            if (rCollect.length === 0) rankingBodyStart2.innerHTML = '<tr><td colspan="3">✨ Sin registros ✨</td>';
+            else rCollect.forEach((e, i) => {
+                let mins = Math.floor(e.time / 60), secs = e.time % 60;
+                rankingBodyStart2.innerHTML += `<tr><td>${i+1}侧<td>${e.name}侧<td>${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}侧</tr>`;
+            });
+        }
+        let rMoves = getPuzzleMovesRanking();
+        if (rankingBodyEnd) {
+            rankingBodyEnd.innerHTML = '';
+            if (rMoves.length === 0) rankingBodyEnd.innerHTML = '<tr><td colspan="3">✨ Sin registros ✨</td>';
+            else rMoves.forEach((e, i) => rankingBodyEnd.innerHTML += `<tr><td>${i+1}侧<td>${e.name}侧<td>${e.moves}侧<tr>`);
+        }
+        let rTime = getPuzzleTimeRanking();
+        if (rankingBodyPuzzleTime) {
+            rankingBodyPuzzleTime.innerHTML = '';
+            if (rTime.length === 0) rankingBodyPuzzleTime.innerHTML = '<tr><td colspan="3">✨ Sin registros ✨</td>';
+            else rTime.forEach((e, i) => rankingBodyPuzzleTime.innerHTML += `<tr><td>${i+1}侧<td>${e.name}侧<td>${e.time.toFixed(1)} seg侧</tr>`);
+        }
+    }
+
+    // Recolección (igual que antes)
+    function updateWordListDisplay() {
+        const wordListEl = document.getElementById('word-list');
+        if (!wordListEl) return;
+        wordListEl.innerHTML = '';
+        GOOD_WORDS.forEach(word => {
+            const li = document.createElement('li');
+            li.textContent = word;
+            if (collected.includes(word)) li.classList.add('collected');
+            else li.classList.add('missing');
+            wordListEl.appendChild(li);
+        });
+    }
+
+    function startGame() {
+        if (gameActive) return;
+        collected = [];
+        collectionSeconds = 0;
+        leaves.forEach(l => l.element.remove());
+        leaves = [];
+        updateWordListDisplay();
+        gameActive = true;
+        const containerRect = gameArea.getBoundingClientRect();
+        playerX = containerRect.width / 2;
+        playerDiv.style.left = playerX + 'px';
+        gameTimerSpan.innerText = '00:00';
+        messageDiv.innerText = '⬅️ ➡️ mover · Atrapá las hojas';
+        screenStart.classList.add('hidden');
+        gameArea.style.display = 'block';
+        screenTransition.classList.add('hidden');
+        screenPuzzle.classList.add('hidden');
+        screenVictory.classList.add('hidden');
+        
+        // Mostrar controles táctiles en esquinas
+        if (touchLeftCorner) touchLeftCorner.classList.remove('hidden-controls');
+        if (touchRightCorner) touchRightCorner.classList.remove('hidden-controls');
+        
+        if (gameTimer) clearInterval(gameTimer);
+        gameTimer = setInterval(() => {
+            if (gameActive) {
+                collectionSeconds++;
+                let min = Math.floor(collectionSeconds / 60), sec = collectionSeconds % 60;
+                gameTimerSpan.innerText = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+            }
+        }, 1000);
+        if (spawnInterval) clearInterval(spawnInterval);
+        spawnInterval = setInterval(() => { if (gameActive) spawnLeaf(); }, 700);
+    }
+
+    function spawnLeaf() {
+        const isGood = Math.random() > 0.4;
+        const word = isGood ? GOOD_WORDS[Math.floor(Math.random() * GOOD_WORDS.length)] : BAD_WORDS_LIST[Math.floor(Math.random() * BAD_WORDS_LIST.length)];
+        const leaf = document.createElement('div');
+        leaf.className = 'leaf';
+        leaf.innerHTML = `🍂 ${word} 🍂`;
+        leaf.style.left = Math.random() * (window.innerWidth - 100) + 'px';
+        leaf.style.animationDuration = (Math.random() * 4 + 4) + 's';
+        document.getElementById('gameArea').appendChild(leaf);
+        leaves.push({ element: leaf, word: word, isGood: isGood });
+    }
+
+    function collectLeaf(leafObj) {
+        if (leafObj.isGood) {
+            if (!collected.includes(leafObj.word)) {
+                collected.push(leafObj.word);
+                updateWordListDisplay();
+                messageDiv.innerText = `✅ Atrapaste: ${leafObj.word}`;
+                setTimeout(() => {
+                    if (messageDiv.innerText === `✅ Atrapaste: ${leafObj.word}`) messageDiv.innerText = '⬅️ ➡️ mover · Atrapá las hojas';
+                }, 1000);
+                if (collected.length === 14) {
+                    gameActive = false;
+                    if (gameTimer) clearInterval(gameTimer);
+                    if (spawnInterval) clearInterval(spawnInterval);
+                    saveScoreToRanking(playerNameInput.value.trim().toUpperCase() || "ANÓNIMO", collectionSeconds);
+                    updateRankingTables();
+                    gameArea.style.display = 'none';
+                    if (touchLeftCorner) touchLeftCorner.classList.add('hidden-controls');
+                    if (touchRightCorner) touchRightCorner.classList.add('hidden-controls');
+                    screenTransition.classList.remove('hidden');
+                }
+            }
+        } else {
+            if (collected.length > 0) {
+                const lost = collected.pop();
+                updateWordListDisplay();
+                messageDiv.innerText = `❌ Perdiste: ${lost}`;
+                setTimeout(() => {
+                    if (messageDiv.innerText === `❌ Perdiste: ${lost}`) messageDiv.innerText = '⬅️ ➡️ mover · Atrapá las hojas';
+                }, 1000);
+            } else {
+                messageDiv.innerText = '❌ No tenés conceptos para perder!';
+                setTimeout(() => {
+                    if (messageDiv.innerText === '❌ No tenés conceptos para perder!') messageDiv.innerText = '⬅️ ➡️ mover · Atrapá las hojas';
+                }, 1000);
+            }
+        }
+        leafObj.element.remove();
+        leaves = leaves.filter(l => l !== leafObj);
+    }
+
+    function updatePlayerPosition() {
+        const containerRect = gameArea.getBoundingClientRect();
+        let minX = 20, maxX = containerRect.width - 70;
+        if (playerX < minX) playerX = minX;
+        if (playerX > maxX) playerX = maxX;
+        playerDiv.style.left = playerX + 'px';
+    }
+
+    function checkCollisions() {
+        const playerRect = playerDiv.getBoundingClientRect();
+        for (let i = leaves.length - 1; i >= 0; i--) {
+            const leaf = leaves[i];
+            const leafRect = leaf.element.getBoundingClientRect();
+            if (playerRect.left < leafRect.right && playerRect.right > leafRect.left && playerRect.top < leafRect.bottom && playerRect.bottom > leafRect.top) collectLeaf(leaf);
+        }
+    }
+
+    // Puzzle
+    function initPuzzleBoard() {
+        let newBoard = [], idx = 0;
+        for (let i = 0; i < ROWS; i++) {
+            newBoard[i] = [];
+            for (let j = 0; j < COLS; j++) newBoard[i][j] = TARGET_WORDS[idx++];
+        }
+        return newBoard;
+    }
+
+    function shufflePuzzleBoard(boardRef, steps = 800) {
+        for (let s = 0; s < steps; s++) {
+            const r1 = Math.floor(Math.random() * ROWS), c1 = Math.floor(Math.random() * COLS);
+            const r2 = Math.floor(Math.random() * ROWS), c2 = Math.floor(Math.random() * COLS);
+            const temp = boardRef[r1][c1];
+            boardRef[r1][c1] = boardRef[r2][c2];
+            boardRef[r2][c2] = temp;
+        }
+        return boardRef;
+    }
+
+    function isPuzzleSolved(boardRef) {
+        let idx = 0;
+        for (let i = 0; i < ROWS; i++)
+            for (let j = 0; j < COLS; j++)
+                if (boardRef[i][j] !== TARGET_WORDS[idx++]) return false;
+        return true;
+    }
+
+    function renderPuzzleBoard() {
+        if (!puzzleGrid) return;
+        puzzleGrid.innerHTML = '';
+        for (let i = 0; i < ROWS; i++) {
+            for (let j = 0; j < COLS; j++) {
+                const value = puzzleBoard[i][j];
+                const isSelected = (puzzleSelected && puzzleSelected.row === i && puzzleSelected.col === j);
+                const tile = document.createElement('div');
+                tile.className = 'puzzle-tile';
+                if (isSelected) tile.classList.add('selected');
+                tile.textContent = value;
+                tile.addEventListener('click', (function(r, c) { return function() { selectPuzzleTile(r, c); }; })(i, j));
+                puzzleGrid.appendChild(tile);
+            }
+        }
+    }
+
+    function selectPuzzleTile(row, col) {
+        if (!puzzleGameActive || puzzleGameCompleted) return;
+        if (puzzleSelected === null) {
+            puzzleSelected = { row, col };
+            renderPuzzleBoard();
+            return;
+        }
+        const temp = puzzleBoard[puzzleSelected.row][puzzleSelected.col];
+        puzzleBoard[puzzleSelected.row][puzzleSelected.col] = puzzleBoard[row][col];
+        puzzleBoard[row][col] = temp;
+        puzzleMoves++;
+        movesSpan.innerText = puzzleMoves;
+        puzzleSelected = null;
+        renderPuzzleBoard();
+        if (isPuzzleSolved(puzzleBoard)) {
+            puzzleGameCompleted = true;
+            if (puzzleTimerInterval) clearInterval(puzzleTimerInterval);
+            const elapsed = (Date.now() - puzzleStartTime) / 1000;
+            timerDisplay.innerText = elapsed.toFixed(1);
+            const playerName = playerNameInput.value.trim().toUpperCase() || "ANÓNIMO";
+            savePuzzleMovesToRanking(playerName, puzzleMoves);
+            savePuzzleTimeToRanking(playerName, elapsed);
+            updateRankingTables();
+            screenPuzzle.classList.add('hidden');
+            screenVictory.classList.remove('hidden');
+        }
+    }
+
+    function resetPuzzleState() {
+        if (puzzleTimerInterval) clearInterval(puzzleTimerInterval);
+        puzzleGameActive = false;
+        puzzleGameCompleted = false;
+        puzzleMoves = 0;
+        puzzleSelected = null;
+        movesSpan.innerText = "0";
+        timerDisplay.innerText = "0.0";
+        puzzleBoard = initPuzzleBoard();
+        renderPuzzleBoard();
+        globalMsgPuzzle.innerHTML = "🔄 Puzzle reiniciado. Presioná 'INICIAR' para empezar.";
+        setTimeout(() => { if (globalMsgPuzzle.innerHTML === "🔄 Puzzle reiniciado. Presioná 'INICIAR' para empezar.") globalMsgPuzzle.innerHTML = ""; }, 2000);
+    }
+
+    function startPuzzleGame() {
+        if (puzzleGameActive) return;
+        if (puzzleTimerInterval) clearInterval(puzzleTimerInterval);
+        puzzleGameActive = true;
+        puzzleGameCompleted = false;
+        puzzleMoves = 0;
+        puzzleSelected = null;
+        movesSpan.innerText = "0";
+        puzzleBoard = initPuzzleBoard();
+        puzzleBoard = shufflePuzzleBoard(puzzleBoard, 800);
+        renderPuzzleBoard();
+        puzzleStartTime = Date.now();
+        puzzleTimerInterval = setInterval(() => {
+            if (puzzleGameActive && !puzzleGameCompleted) {
+                const elapsed = (Date.now() - puzzleStartTime) / 1000;
+                timerDisplay.innerText = elapsed.toFixed(1);
+            }
+        }, 100);
+        globalMsgPuzzle.innerHTML = "🧩 ¡PUZZLE INICIADO! Intercambiá las fichas.";
+        setTimeout(() => { if (globalMsgPuzzle.innerHTML === "🧩 ¡PUZZLE INICIADO! Intercambiá las fichas.") globalMsgPuzzle.innerHTML = ""; }, 2000);
+    }
+
+    function startPuzzleTransition() {
+        screenTransition.classList.add('hidden');
+        screenPuzzle.classList.remove('hidden');
+        const playerName = playerNameInput.value.trim().toUpperCase() || "ANÓNIMO";
+        if (puzzlePlayerNameDisplay) puzzlePlayerNameDisplay.innerText = playerName;
+        puzzleBoard = initPuzzleBoard();
+        renderPuzzleBoard();
+        puzzleGameActive = false;
+        puzzleGameCompleted = false;
+        puzzleMoves = 0;
+        puzzleSelected = null;
+        movesSpan.innerText = "0";
+        timerDisplay.innerText = "0.0";
+        if (puzzleTimerInterval) clearInterval(puzzleTimerInterval);
+        globalMsgPuzzle.innerHTML = "✅ Puzzle listo. Presioná 'INICIAR' para comenzar.";
+        
+        // Verificar orientación para el puzzle
+        checkPuzzleOrientation();
+    }
+    
+	function checkPuzzleOrientation() {
+		const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+		if (!isMobile) {
+			if (puzzleWarning) puzzleWarning.style.display = 'none';
+			if (puzzleContent) puzzleContent.style.display = 'block';
+			return;
+		}
+		const isLandscape = window.innerWidth > window.innerHeight;
+		if (puzzleWarning && puzzleContent) {
+			if (!isLandscape) {
+				puzzleWarning.style.display = 'flex';
+				puzzleContent.style.display = 'none';
+				// También pausar el juego del puzzle si está activo
+				if (puzzleGameActive) {
+					puzzleGameActive = false;
+					if (puzzleTimerInterval) clearInterval(puzzleTimerInterval);
+				}
+			} else {
+				puzzleWarning.style.display = 'none';
+				puzzleContent.style.display = 'block';
+			}
+		}
+	}
+
+    // Controles
+    let leftPressed = false, rightPressed = false;
+    
+    function updateMovement() {
+        if (!gameActive || gameArea.style.display !== 'block') return;
+        if (leftPressed) playerX -= 14;
+        if (rightPressed) playerX += 14;
+        updatePlayerPosition();
+    }
+
+    function gameLoop() {
+        updateMovement();
+        checkCollisions();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // Teclado
+    window.addEventListener('keydown', (e) => {
+        if (gameActive && gameArea.style.display === 'block') {
+            if (e.key === 'ArrowLeft') { e.preventDefault(); leftPressed = true; }
+            if (e.key === 'ArrowRight') { e.preventDefault(); rightPressed = true; }
+        }
+    });
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowLeft') leftPressed = false;
+        if (e.key === 'ArrowRight') rightPressed = false;
+    });
+
+    // Controles táctiles en esquinas
+    if (touchLeftCorner) {
+        touchLeftCorner.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameActive) leftPressed = true; });
+        touchLeftCorner.addEventListener('touchend', (e) => { e.preventDefault(); leftPressed = false; });
+        touchLeftCorner.addEventListener('mousedown', () => { if (gameActive) leftPressed = true; });
+        touchLeftCorner.addEventListener('mouseup', () => { leftPressed = false; });
+    }
+    if (touchRightCorner) {
+        touchRightCorner.addEventListener('touchstart', (e) => { e.preventDefault(); if (gameActive) rightPressed = true; });
+        touchRightCorner.addEventListener('touchend', (e) => { e.preventDefault(); rightPressed = false; });
+        touchRightCorner.addEventListener('mousedown', () => { if (gameActive) rightPressed = true; });
+        touchRightCorner.addEventListener('mouseup', () => { rightPressed = false; });
+    }
+
+    // Orientación para recolección (vertical)
+    let warningVisible = false;
+	function checkOrientation() {
+		const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+		if (!isMobile) return;
+		const isLandscape = window.innerWidth > window.innerHeight;
+		
+		// Para TODAS las pantallas del juego, forzar horizontal
+		const juegoActivo = gameArea.style.display === 'block' || 
+							screenPuzzle.classList.contains('hidden') === false ||
+							screenTransition.classList.contains('hidden') === false;
+		
+		if (juegoActivo) {
+			if (!isLandscape && !warningVisible) {
+				orientationWarning.classList.add('show');
+				warningVisible = true;
+			} else if (isLandscape && warningVisible) {
+				orientationWarning.classList.remove('show');
+				warningVisible = false;
+			}
+		}
+		// También verificar orientación específica del puzzle
+		if (screenPuzzle.classList.contains('hidden') === false) {
+			checkPuzzleOrientation();
+		}
+	}
+    
+    understoodBtn.addEventListener('click', () => {
+        orientationWarning.classList.remove('show');
+        warningVisible = false;
+    });
+    
+    window.addEventListener('resize', () => { 
+        checkOrientation(); 
+        if (gameActive) updatePlayerPosition();
+        if (screenPuzzle.classList.contains('hidden') === false) checkPuzzleOrientation();
+    });
+    window.addEventListener('orientationchange', () => { 
+        setTimeout(checkOrientation, 50); 
+        setTimeout(() => { if (gameActive) updatePlayerPosition(); }, 100);
+        if (screenPuzzle.classList.contains('hidden') === false) setTimeout(checkPuzzleOrientation, 100);
+    });
+
+    btnStart.addEventListener('click', startGame);
+    btnRestart.addEventListener('click', () => { startGame(); });
+    btnGoPuzzle.addEventListener('click', startPuzzleTransition);
+    startPuzzleBtn.addEventListener('click', startPuzzleGame);
+    resetPuzzleBtn.addEventListener('click', resetPuzzleState);
+    
+    gameLoop();
+    updateRankingTables();
+    checkOrientation();
+</script>
+</body>
+</html>
